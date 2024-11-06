@@ -27,7 +27,7 @@ class Neo4jUploader:
             MERGE (c:Chunk {id: row.chunk_id})
             SET c.text = row.chunk_text,
                 c.index = row.index,
-                c.document_name = row.document_name
+                c.document_name = $document_name
             MERGE (d)-[:HAS_CHUNK]->(c)
             WITH c, row
             UNWIND row.atomic_facts AS af
