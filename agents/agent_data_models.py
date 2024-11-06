@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
-from typing_extensions import TypedDict
-from typing import List, Annotated
+from typing import List, Annotated, TypedDict
 from operator import add
 
 class InputState(TypedDict):

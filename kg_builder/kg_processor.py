@@ -1,8 +1,8 @@
 import asyncio
 from hashlib import md5
 from datetime import datetime
-from .neo4j_uploader import Neo4jUploader
-from .data_models import Extraction
+from neo4j_uploader import Neo4jUploader
+from data_models import Extraction
 
 from langchain_text_splitters import TokenTextSplitter
 from langchain_core.prompts import ChatPromptTemplate

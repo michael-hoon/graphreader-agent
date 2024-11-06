@@ -1,6 +1,8 @@
 from typing import Literal
 from dotenv import load_dotenv
+
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
 
 from agent_data_models import (
     OverallState,
@@ -47,31 +49,40 @@ def neighbor_condition(state: OverallState,) -> Literal["answer_reasoning", "ato
 # LangGraph Control Flow
 ####################################################
 
-langgraph = StateGraph(OverallState, input=InputState, output=OutputState)
-langgraph.add_node(rational_plan_node)
-langgraph.add_node(initial_node_selection)
-langgraph.add_node(atomic_fact_check)
-langgraph.add_node(chunk_check)
-langgraph.add_node(answer_reasoning)
-langgraph.add_node(neighbor_select)
+builder = StateGraph(OverallState, input=InputState, output=OutputState)
+builder.add_node(rational_plan_node)
+builder.add_node(initial_node_selection)
+builder.add_node(atomic_fact_check)
+builder.add_node(chunk_check)
+builder.add_node(answer_reasoning)
+builder.add_node(neighbor_select)
 
-langgraph.add_edge(START, "rational_plan_node")
-langgraph.add_edge("rational_plan_node", "initial_node_selection")
-langgraph.add_edge("initial_node_selection", "atomic_fact_check")
-langgraph.add_conditional_edges(
+builder.add_edge(START, "rational_plan_node")
+builder.add_edge("rational_plan_node", "initial_node_selection")
+builder.add_edge("initial_node_selection", "atomic_fact_check")
+builder.add_conditional_edges(
     "atomic_fact_check",
     atomic_fact_condition,
 )
-langgraph.add_conditional_edges(
+builder.add_conditional_edges(
     "chunk_check",
     chunk_condition,
 )
-langgraph.add_conditional_edges(
+builder.add_conditional_edges(
     "neighbor_select",
     neighbor_condition,
 )
-langgraph.add_edge("answer_reasoning", END)
+builder.add_edge("answer_reasoning", END)
 
-langgraph = langgraph.compile()
+# pass checkpointer for persistence
+graph = builder.compile(checkpointer=MemorySaver())
+config = {"configurable": {"thread_id": "1"}} # need some way to set the thread_id across different streamlit sessions
 
-langgraph.invoke({"question":"What is deep learning and how is it used in nuclear safety research?"})
+graph.invoke({"question":"How is deep learning used in nuclear safety research?"}, config=config)
+
+# graph.invoke({"question":"What did I just ask you?"}, config=config)
+
+# def invoke_graph(st_messages, callables):
+#     if not isinstance(callables, list):
+#         raise TypeError("callables must be a list")
+#     return graph.invoke({"messages":st_messages}, config={"callables":callables})

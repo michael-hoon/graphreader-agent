@@ -418,8 +418,7 @@ def neighbor_select(state: OverallState) -> OverallState:
 ########################################
 
 answer_reasoning_system_prompt = """
-As an intelligent research assistant, your primary objective is to answer questions based on information within a text. To facilitate this objective, a knowledge graph has been created from the text, comprising the
-following elements:
+As an intelligent research assistant, your primary objective is to answer questions based on information within a text. To facilitate this objective, a knowledge graph has been created from the text, comprising the following elements:
 1. Text Chunks: Segments of the original text.
 2. Atomic Facts: Smallest, indivisible truths extracted from text chunks.
 3. Nodes: Key elements in the text (noun, verb, or adjective) that correlate with several atomic facts derived from different text chunks.
@@ -474,6 +473,7 @@ def answer_reasoning(state: OverallState) -> OutputState:
     final_answer = answer_reasoning_chain.invoke(
         {"question": state.get("question"), "notebook": state.get("notebook")}
     )
+    print(f"Final answer generated: {final_answer.final_answer}")
     return {
         "answer": final_answer.final_answer,
         "analysis": final_answer.analyze,

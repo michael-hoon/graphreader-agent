@@ -26,20 +26,20 @@ def get_neighbors_by_key_element(key_elements):
     """, params={"key_elements":key_elements})
     return data
 
-def get_subsequent_chunk_id(chunk):
+def get_subsequent_chunk_id(chunk_id):
     data = neo4j_graph.query("""
     MATCH (c:Chunk)-[:NEXT]->(next)
     WHERE c.id = $id
     RETURN next.id AS next
-    """)
+    """, params={"id": chunk_id})
     return data
 
-def get_previous_chunk_id(chunk):
+def get_previous_chunk_id(chunk_id):
     data = neo4j_graph.query("""
     MATCH (c:Chunk)<-[:NEXT]-(previous)
     WHERE c.id = $id
     RETURN previous.id AS previous
-    """)
+    """, params={"id": chunk_id})
     return data
 
 def get_chunk(chunk_id: str) -> List[Dict[str, str]]:

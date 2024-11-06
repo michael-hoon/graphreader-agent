@@ -1,6 +1,6 @@
 import asyncio
-from kg_builder.pdf_extractor import PDFExtractor
-from kg_builder.kg_processor import KGProcessor
+from pdf_extractor import PDFExtractor
+from kg_processor import KGProcessor
 
 async def main():
     extractor = PDFExtractor(docs_path="docs/")
