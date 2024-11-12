@@ -1,0 +1,188 @@
+from typing import Literal
+from dotenv import load_dotenv
+
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+
+from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
+
+from state import (
+    OverallState,
+)
+
+from agent_nodes import (
+    semantic_router,
+    clarification,
+    general_query,
+    rational_plan_node,
+    initial_node_selection,
+    atomic_fact_check,
+    chunk_check,
+    answer_reasoning,
+    neighbor_select,
+    summarize_conversation,
+)
+
+load_dotenv()
+
+####################################################
+# LangGraph State Conditions (for conditional edges)
+####################################################
+
+def atomic_fact_condition(
+        state: OverallState,
+    ) -> Literal["neighbor_select", "chunk_check"]:
+    if state.get("chosen_action") == "stop_and_read_neighbor":
+        return "neighbor_select"
+    elif state.get("chosen_action") == "read_chunk":
+        return "chunk_check"
+
+def chunk_condition(
+        state: OverallState,
+    ) -> Literal["answer_reasoning", "chunk_check", "neighbor_select"]:
+    if state.get("chosen_action") == "termination":
+        return "answer_reasoning"
+    elif state.get("chosen_action") in ["read_subsequent_chunk", "read_previous_chunk", "search_more"]:
+        return "chunk_check"
+    elif state.get("chosen_action") == "search_neighbor":
+        return "neighbor_select"
+
+def neighbor_condition(
+        state: OverallState,
+    ) -> Literal["answer_reasoning", "atomic_fact_check"]:
+    if state.get("chosen_action") == "termination":
+        return "answer_reasoning"
+    elif state.get("chosen_action") == "read_neighbor_node":
+        return "atomic_fact_check"
+    
+def route_query_condition(
+    state: OverallState,
+    ) -> Literal["rational_plan_node", "clarification", "general_query"]:
+    """Determine the next step based on the query classification.
+
+    Args:
+        state (OverallState): The current state of the agent, including the router's classification.
+
+    Returns:
+        Literal["rational_plan_node", "clarification", "general_query"]: The next step to take.
+
+    Raises:
+        ValueError: If an unknown router type is encountered.
+    """
+    if state.get("route") == "research":
+        return "rational_plan_node"
+    elif state.get("route") == "clarification":
+        return "clarification"
+    elif state.get("route") == "general_query":
+        return "general_query"
+    else:
+        raise ValueError(f"Unknown router type {state.get('route')}")
+    
+def summary_condition(
+        state: OverallState,
+    ) -> Literal["summarize_conversation", END]:
+    messages = state["messages"]
+    # summarise only if conversation exceeds 3 turns (6 messages)
+    if len(messages) > 6:
+        return "summarize_conversation"
+    return END
+    
+####################################################
+# LangGraph Control Flow
+####################################################
+
+# builder = StateGraph(OverallState)
+# builder.add_node(rational_plan_node)
+# builder.add_node(initial_node_selection)
+# builder.add_node(atomic_fact_check)
+# builder.add_node(chunk_check)
+# builder.add_node(answer_reasoning)
+# builder.add_node(neighbor_select)
+# builder.add_node(summarize_conversation)
+
+# builder.add_edge(START, "rational_plan_node")
+# builder.add_edge("rational_plan_node", "initial_node_selection")
+# builder.add_edge("initial_node_selection", "atomic_fact_check")
+# builder.add_conditional_edges(
+#     "atomic_fact_check",
+#     atomic_fact_condition,
+# )
+# builder.add_conditional_edges(
+#     "chunk_check",
+#     chunk_condition,
+# )
+# builder.add_conditional_edges(
+#     "neighbor_select",
+#     neighbor_condition,
+# )
+# builder.add_conditional_edges(
+#     "answer_reasoning",
+#     summary_condition,
+# )
+# builder.add_edge("summarize_conversation", END)
+# # builder.add_edge("answer_reasoning", END)
+
+# # pass checkpointer for persistence
+# graph = builder.compile(checkpointer=MemorySaver())
+# config = {"configurable": {"thread_id": "1"}} # need some way to set the thread_id across different streamlit sessions
+
+# graph.invoke({"question":"How is deep learning used in nuclear safety research?"}, config=config)
+
+# graph.invoke({"question":"What did I just ask you?"}, config=config)
+
+# def invoke_graph(st_messages, callables):
+#     if not isinstance(callables, list):
+#         raise TypeError("callables must be a list")
+#     return graph.invoke({"messages":st_messages}, config={"callables":callables})
+
+langgraph = StateGraph(OverallState)
+
+langgraph.add_node(semantic_router)
+langgraph.add_node(clarification)
+langgraph.add_node(general_query)
+langgraph.add_node(rational_plan_node)
+langgraph.add_node(initial_node_selection)
+langgraph.add_node(atomic_fact_check)
+langgraph.add_node(chunk_check)
+langgraph.add_node(answer_reasoning)
+langgraph.add_node(neighbor_select)
+langgraph.add_node(summarize_conversation)
+
+langgraph.add_edge(START, "semantic_router")
+
+langgraph.add_conditional_edges(
+    "semantic_router",
+    route_query_condition,
+)
+langgraph.add_conditional_edges(
+    "atomic_fact_check",
+    atomic_fact_condition,
+)
+langgraph.add_conditional_edges(
+    "chunk_check",
+    chunk_condition,
+)
+langgraph.add_conditional_edges(
+    "neighbor_select",
+    neighbor_condition,
+)
+langgraph.add_conditional_edges(
+    "answer_reasoning",
+    summary_condition,
+)
+langgraph.add_conditional_edges(
+    "clarification",
+    summary_condition,
+)
+langgraph.add_conditional_edges(
+    "general_query",
+    summary_condition,
+)
+langgraph.add_edge("rational_plan_node", "initial_node_selection")
+langgraph.add_edge("initial_node_selection", "atomic_fact_check")
+langgraph.add_edge("summarize_conversation", END)
+
+langgraph = langgraph.compile(checkpointer=MemorySaver())
+config = {"configurable": {"thread_id": "1"}} # need some way to set the thread_id across different streamlit sessions
+
+langgraph.invoke({"messages": [HumanMessage(content="what is deep learning and how is it used in nuclear safety research?")]}, config=config)
