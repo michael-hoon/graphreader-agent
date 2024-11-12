@@ -17,7 +17,7 @@ Classify a user inquiry as this if it is directly research-related and involves 
 - The user needs guidance on interpreting research findings, comparing methodologies, or identifying key findings within a dataset of papers.
 - The user asks for recent research trends or technical comparisons in a specific area.
 
-## `general`
+## `general_query`
 
 Classify a user inquiry as this if it is a general greeting or an unrelated question that doesn't require research-specific knowledge. Examples include:
 

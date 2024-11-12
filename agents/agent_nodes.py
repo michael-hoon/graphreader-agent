@@ -1,4 +1,4 @@
-from state import (
+from .state import (
     OverallState,
     Router,
     InitialNodes,
@@ -7,7 +7,7 @@ from state import (
     NeighborOutput,
     AnswerReasonOutput,
 )
-from kg_queries import (
+from .kg_queries import (
     get_atomic_facts,
     get_neighbors_by_key_element,
     get_subsequent_chunk_id,
@@ -15,7 +15,7 @@ from kg_queries import (
     get_chunk,
 )
 
-from prompts import (
+from .prompts import (
     RATIONAL_PLAN_SYSTEM,
     INITIAL_NODE_SYSTEM,
     ATOMIC_FACT_CHECK_SYSTEM,
@@ -27,11 +27,11 @@ from prompts import (
     MORE_INFO_SYSTEM_PROMPT,
 ) #TODO i think these can be set by using a configurable file in langgraph, makes things easier
 
+from .utils import parse_function
+
 from typing import Dict, List
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-
-from utils import parse_function
 
 from langchain_community.graphs import Neo4jGraph
 from langchain_community.vectorstores import Neo4jVector
@@ -107,7 +107,7 @@ def clarification(
     print("Step: Clarification")
 
     question = state.get("question")
-    messages = [SystemMessage(content=more_info_system_prompt)] + [HumanMessage(content=question)] + state["question"]
+    messages = [SystemMessage(content=more_info_system_prompt)] + [HumanMessage(content=question)] + state["messages"]
 
     clarification_reply = model.invoke(messages)
     return {
