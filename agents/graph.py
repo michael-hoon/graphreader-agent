@@ -135,54 +135,77 @@ def summary_condition(
 #         raise TypeError("callables must be a list")
 #     return graph.invoke({"messages":st_messages}, config={"callables":callables})
 
-builder = StateGraph(OverallState)
+agent = StateGraph(OverallState)
 
-builder.add_node(semantic_router)
-builder.add_node(clarification)
-builder.add_node(general_query)
-builder.add_node(rational_plan_node)
-builder.add_node(initial_node_selection)
-builder.add_node(atomic_fact_check)
-builder.add_node(chunk_check)
-builder.add_node(answer_reasoning)
-builder.add_node(neighbor_select)
-builder.add_node(summarize_conversation)
+agent.add_node(semantic_router)
+agent.add_node(clarification)
+agent.add_node(general_query)
+agent.add_node(rational_plan_node)
+agent.add_node(initial_node_selection)
+agent.add_node(atomic_fact_check)
+agent.add_node(chunk_check)
+agent.add_node(answer_reasoning)
+agent.add_node(neighbor_select)
+agent.add_node(summarize_conversation)
 
-builder.add_edge(START, "semantic_router")
+agent.add_edge(START, "semantic_router")
 
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "semantic_router",
     route_query_condition,
 )
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "atomic_fact_check",
     atomic_fact_condition,
 )
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "chunk_check",
     chunk_condition,
 )
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "neighbor_select",
     neighbor_condition,
 )
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "answer_reasoning",
     summary_condition,
 )
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "clarification",
     summary_condition,
 )
-builder.add_conditional_edges(
+agent.add_conditional_edges(
     "general_query",
     summary_condition,
 )
-builder.add_edge("rational_plan_node", "initial_node_selection")
-builder.add_edge("initial_node_selection", "atomic_fact_check")
-builder.add_edge("summarize_conversation", END)
+agent.add_edge("rational_plan_node", "initial_node_selection")
+agent.add_edge("initial_node_selection", "atomic_fact_check")
+agent.add_edge("summarize_conversation", END)
 
-graph = builder.compile(checkpointer=MemorySaver())
+graph = agent.compile(
+    checkpointer=MemorySaver(),
+)
 # config = {"configurable": {"thread_id": "1"}} # need some way to set the thread_id across different streamlit sessions
 
 # langgraph.invoke({"messages": [HumanMessage(content="what is deep learning and how is it used in nuclear safety research?")]}, config=config)
+
+def chatbot_response(
+        input_text: str,
+        config: dict = None,
+    ) -> str:
+    """
+    Generate a response from the chatbot based on the user's input text.
+    
+    Args:
+        input_text (str): The user's input text to generate a response for.
+        config (dict, optional): Configuration settings for the chatbot. Defaults to None.
+        
+    Returns:
+        str: The chatbot's response to the user's input text.
+    """
+
+    # ensure that callables is a list as you can have multiple callbacks
+    if not isinstance(config.get("callbacks"), list):
+        raise TypeError("callables must be a list")
+    output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]}, config=config)
+    return output_text['messages'][-1].content
