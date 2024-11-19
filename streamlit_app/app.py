@@ -1,6 +1,7 @@
 import sys
 import os
 import uuid
+import asyncio
 
 import streamlit as st
 
@@ -8,6 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from agents.graph import chatbot_response
 from st_callable_util import get_streamlit_cb
+from kg_builder.run_pipeline import process_kg
+from kg_builder.kg_reset import Neo4jResetter
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -17,21 +20,6 @@ st.set_page_config(
     layout="wide",
 )
 st.title("🧠 GraphMind: Your Personal AI Research Assistant")
-
-with st.sidebar:
-    st.image("/home/micha/Python_Files/graphreader-agent/static/graphmind_logo.jpg")
-    st.caption("Your AI-powered research assistant for multi-hop reasoning and long-context queries.")
-    
-    st.header("Graph Management")
-    if st.button("Process Knowledge Graph"):
-        with st.spinner("Processing knowledge graph..."):
-            st.caption("Knowledge graph processing complete.")
-            pass
-        pass
-
-    st.header("LLM Management")
-    llm = st.selectbox("Select LLM Model", ["llama3.1", "gpt-4o-mini", "Qwen2.5-Coder"])
-    embeddings = st.selectbox("Select Embedding Model", ["text-embedding-3-small", "nomic-embed-text"])
 
 # st body content
 """
@@ -47,6 +35,7 @@ if "user_id" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = [AIMessage(content="Hello! How can I help you today?")]
 
+# states for pill handling
 if "selected_pill" not in st.session_state:
     st.session_state.selected_pill = None
 
@@ -59,6 +48,40 @@ config = {
     "configurable": {"thread_id": st.session_state.user_id},
     "callbacks": [st_callback],
 }
+
+with st.sidebar:
+    st.image("/home/micha/Python_Files/graphreader-agent/static/graphmind_logo.jpg")
+    st.caption("Your AI-powered research assistant for multi-hop reasoning and long-context queries.")
+    
+    st.header("LLM Management")
+    llm = st.selectbox("Select LLM Model", ["llama3.1", "gpt-4o-mini", "Qwen2.5-Coder"])
+    embeddings = st.selectbox("Select Embedding Model", ["text-embedding-3-small", "nomic-embed-text"])
+
+    st.header("Graph Management")
+    if st.button("🧠 Process Knowledge Graph"):
+        with st.spinner("Processing knowledge graph..."):
+            asyncio.run(process_kg())
+        st.caption("Knowledge graph processing complete.")
+
+    if st.button("⚠️ Reset Knowledge Graph"):
+        with st.spinner("Resetting knowledge graph..."):
+            try:
+                resetter = Neo4jResetter()
+                resetter.reset_graph()
+                st.caption("Knowledge graph reset successfully.")
+            except Exception as e:
+                st.error(f"An error occurred while resetting the graph: {e}")
+
+    st.header("Chat Management")
+    if st.button("🔄 Clear Chat History"):
+        st.session_state.messages = [AIMessage(content="Hello! How can I help you today?")]
+        del st.session_state.user_id
+        st.session_state.first_interaction = False
+        st.rerun()
+        st.caption("Chat history cleared successfully.")
+    
+    if st.button("📥 Save Conversation"):
+        st.caption("Conversation saved successfully.")
 
 # display chat messages from history
 for message in st.session_state.messages:

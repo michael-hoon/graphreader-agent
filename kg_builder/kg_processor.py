@@ -1,8 +1,9 @@
 import asyncio
 from hashlib import md5
 from datetime import datetime
-from neo4j_uploader import Neo4jUploader
-from data_models import Extraction
+
+from kg_builder.neo4j_uploader import Neo4jUploader
+from kg_builder.data_models import Extraction
 
 from langchain_text_splitters import TokenTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
@@ -55,10 +56,10 @@ class KGProcessor:
 
         self.construction_chain = self.construction_prompt | self.structured_llm
 
-    def encode_md5(self, text):
+    def encode_md5(self, text) -> str:
         return md5(text.encode("utf-8")).hexdigest()
     
-    async def process_document(self, text, document_name):
+    async def process_document(self, text, document_name) -> None:
         start = datetime.now()
         print(f"Started extraction at: {start}")
 

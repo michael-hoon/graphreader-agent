@@ -1,9 +1,9 @@
 import asyncio
-from pdf_extractor import PDFExtractor
-from kg_processor import KGProcessor
+from kg_builder.pdf_extractor import PDFExtractor
+from kg_builder.kg_processor import KGProcessor
 
-async def main():
-    extractor = PDFExtractor(docs_path="docs/")
+async def process_kg():
+    extractor = PDFExtractor(docs_path="../docs/")
 
     print("Extracting text from PDFs...")
     extracted_texts = extractor.extract_texts()
@@ -20,5 +20,5 @@ async def main():
     
     print("KG construction and upload completed successfully.")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# if __name__ == "__main__":
+#     asyncio.run(main())

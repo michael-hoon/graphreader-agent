@@ -8,7 +8,7 @@ class Neo4jUploader:
         self.graph = Neo4jGraph(refresh_schema=False)
         self.set_constraints()
 
-    def set_constraints(self):
+    def set_constraints(self) -> None:
         # enforces unique IDs on all 4 node types
         constraints = [
             "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Chunk) REQUIRE c.id IS UNIQUE",
@@ -19,7 +19,7 @@ class Neo4jUploader:
         for query in constraints:
             self.graph.query(query)
 
-    def upload_data(self, data, document_name):
+    def upload_data(self, data, document_name) -> None:
         import_query = """
             MERGE (d:Document {id:$document_name})
             WITH d
@@ -41,7 +41,7 @@ class Neo4jUploader:
         """
         self.graph.query(import_query, params={"data": data, "document_name": document_name})
 
-    def create_next_relationships(self, document_name):
+    def create_next_relationships(self, document_name) -> None:
         # link chunk nodes in sequence by order in the document structure
         next_relationship_query = """
             MATCH (c:Chunk) WHERE c.document_name = $document_name
