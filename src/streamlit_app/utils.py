@@ -86,3 +86,19 @@ def get_conversation_export(user_id: uuid.UUID, messages: List[HumanMessage | AI
         "messages": [message_to_dict(msg) for msg in messages],
     }
     return json.dumps(conversation_data, indent=2)
+
+def click_delete(val: int, message: List) -> None:
+    """
+    Deletes a message from the conversation history based on the index provided.
+
+    Args:
+        val (int): Index of the message to delete.
+        message (HumanMessage | AIMessage): The message object to delete.
+    """
+    index_to_delete = val - 1
+    if 0 <= index_to_delete < len(message):
+        if isinstance(message[index_to_delete], HumanMessage):
+            del message[index_to_delete]
+            # check if there's an AI message to delete following the user's message
+            if index_to_delete < len(message) and isinstance(message[index_to_delete], AIMessage):
+                del message[index_to_delete]

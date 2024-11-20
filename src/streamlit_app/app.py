@@ -16,6 +16,7 @@ from kg_builder.kg_reset import Neo4jResetter
 from utils import (
     log_feedback,
     get_conversation_export,
+    click_delete,
 )
 
 from langchain_core.messages import HumanMessage, AIMessage
@@ -113,24 +114,29 @@ with st.sidebar:
 
 # display chat messages from history
 for index, message in enumerate(st.session_state.messages):
-    # only show feedback for AIMessage
-    if isinstance(message, AIMessage):
-        with st.chat_message("assistant"):
-            st.markdown(message.content)
-            feedback_key = f"feedback_{index}"
-            feedback_value = st.feedback(
-                options="thumbs", 
-                key=feedback_key,
-            )
-            # checking if feedback has changed
-            if feedback_value is not None:
-                if feedback_key not in st.session_state.feedback_states or st.session_state.feedback_states[feedback_key] != feedback_value:
-                    st.session_state.feedback_states[feedback_key] = feedback_value
-                    log_feedback(feedback_value, index)
-
-    if isinstance(message, HumanMessage):
-        with st.chat_message("user"):
-            st.markdown(message.content)
+    name = "assistant" if isinstance(message, AIMessage) else "user"
+    with st.container():
+        col1, col2 = st.columns([9, 1])
+        # chat message in main column
+        with col1:
+            st.chat_message(name).markdown(message.content)
+        # delete button only for user messages
+        if name == "user":
+            with col2:
+                with st.chat_message(name, avatar=":material/delete:"):
+                    st.button("", key=-index, on_click=click_delete, args=[index, st.session_state.messages])
+        # only show feedback for AIMessage
+    if name == "assistant":
+        feedback_key = f"feedback_{index}"
+        feedback_value = st.feedback(        
+            options="thumbs", 
+            key=feedback_key,
+        )
+        # checking if feedback has changed
+        if feedback_value is not None:
+            if feedback_key not in st.session_state.feedback_states or st.session_state.feedback_states[feedback_key] != feedback_value:
+                st.session_state.feedback_states[feedback_key] = feedback_value
+                log_feedback(feedback_value, index)
 
 sample_questions = [
     "☢️ What is deep learning and how is it used in nuclear safety research?",
@@ -159,13 +165,19 @@ if not st.session_state.first_interaction:
         with st.chat_message("assistant"):
             st.markdown(bot_response)
         st.session_state.messages.append(AIMessage(content=bot_response))
-        # st.rerun()
+        # st.rerun() # rerunning here will reset the callback container, rendering it not visible
 
 if user_input := st.chat_input("Ask me anything!"):
     st.session_state.first_interaction = True
-
-    st.chat_message("user").markdown(user_input)
     st.session_state.messages.append(HumanMessage(content=user_input))
+    with st.container():
+        msg_index = len(st.session_state.messages)
+        col1, col2 = st.columns([9, 1])
+        with col1:
+            st.chat_message("user").markdown(user_input)
+        with col2:
+            with st.chat_message("user", avatar=":material/delete:"):
+                st.button("", key=-msg_index, on_click=click_delete, args=[msg_index, st.session_state.messages])
 
     with st.spinner(text="Thinking..."):
         bot_response = chatbot_response(input_text=user_input, config=config)
