@@ -2,6 +2,7 @@ import sys
 import os
 import uuid
 import asyncio
+from datetime import datetime
 
 import streamlit as st
 
@@ -11,6 +12,11 @@ from agents.graph import chatbot_response
 from st_callable_util import get_streamlit_cb
 from kg_builder.run_pipeline import process_kg
 from kg_builder.kg_reset import Neo4jResetter
+
+from utils import (
+    log_feedback,
+    get_conversation_export,
+)
 
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -42,15 +48,21 @@ if "selected_pill" not in st.session_state:
 if "first_interaction" not in st.session_state:
     st.session_state.first_interaction = False
 
+# state for feedback handling
+if "feedback_states" not in st.session_state:
+    st.session_state.feedback_states = {}
+
 # create a new container for streaming messages only, and give it context
 st_callback = get_streamlit_cb(st.container())
+
 config = {
     "configurable": {"thread_id": st.session_state.user_id},
     "callbacks": [st_callback],
 }
 
+# sidebar setup
 with st.sidebar:
-    st.image("/home/micha/Python_Files/graphreader-agent/static/graphmind_logo.jpg")
+    st.image("../../static/graphmind_logo.jpg")
     st.caption("Your AI-powered research assistant for multi-hop reasoning and long-context queries.")
     
     st.header("LLM Management")
@@ -58,12 +70,18 @@ with st.sidebar:
     embeddings = st.selectbox("Select Embedding Model", ["text-embedding-3-small", "nomic-embed-text"])
 
     st.header("Graph Management")
-    if st.button("🧠 Process Knowledge Graph"):
+    if st.button(
+        label="Process Knowledge Graph",
+        icon="🧠",
+    ):
         with st.spinner("Processing knowledge graph..."):
             asyncio.run(process_kg())
         st.caption("Knowledge graph processing complete.")
 
-    if st.button("⚠️ Reset Knowledge Graph"):
+    if st.button(
+            label="Reset Knowledge Graph",
+            icon="⚠️",
+        ):
         with st.spinner("Resetting knowledge graph..."):
             try:
                 resetter = Neo4jResetter()
@@ -73,21 +91,43 @@ with st.sidebar:
                 st.error(f"An error occurred while resetting the graph: {e}")
 
     st.header("Chat Management")
-    if st.button("🔄 Clear Chat History"):
+    if st.button(
+        label="Clear Chat History",
+        icon="🔄",
+    ):
         st.session_state.messages = [AIMessage(content="Hello! How can I help you today?")]
         del st.session_state.user_id
         st.session_state.first_interaction = False
         st.rerun()
         st.caption("Chat history cleared successfully.")
-    
-    if st.button("📥 Save Conversation"):
-        st.caption("Conversation saved successfully.")
+
+    # feedback buttons
+    json_conversation = get_conversation_export(st.session_state.user_id, st.session_state.messages)
+    st.download_button(
+        label="Save Conversation",
+        data=json_conversation,
+        file_name=f"chat_conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        mime="application/json",
+        icon="📥",
+    )
 
 # display chat messages from history
-for message in st.session_state.messages:
+for index, message in enumerate(st.session_state.messages):
+    # only show feedback for AIMessage
     if isinstance(message, AIMessage):
         with st.chat_message("assistant"):
             st.markdown(message.content)
+            feedback_key = f"feedback_{index}"
+            feedback_value = st.feedback(
+                options="thumbs", 
+                key=feedback_key,
+            )
+            # checking if feedback has changed
+            if feedback_value is not None:
+                if feedback_key not in st.session_state.feedback_states or st.session_state.feedback_states[feedback_key] != feedback_value:
+                    st.session_state.feedback_states[feedback_key] = feedback_value
+                    log_feedback(feedback_value, index)
+
     if isinstance(message, HumanMessage):
         with st.chat_message("user"):
             st.markdown(message.content)
@@ -121,17 +161,15 @@ if not st.session_state.first_interaction:
         st.session_state.messages.append(AIMessage(content=bot_response))
         st.rerun()
 
-# user input handling
 if user_input := st.chat_input("Ask me anything!"):
     st.session_state.first_interaction = True
-    # display and store the user's message
+
     st.chat_message("user").markdown(user_input)
     st.session_state.messages.append(HumanMessage(content=user_input))
 
-    # generate bot response
     with st.spinner(text="Thinking..."):
         bot_response = chatbot_response(input_text=user_input, config=config)
-    # display and store the bot's response
+
     with st.chat_message("assistant"):
         st.markdown(bot_response)
     st.session_state.messages.append(AIMessage(content=bot_response))
