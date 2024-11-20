@@ -159,7 +159,7 @@ if not st.session_state.first_interaction:
         with st.chat_message("assistant"):
             st.markdown(bot_response)
         st.session_state.messages.append(AIMessage(content=bot_response))
-        st.rerun()
+        # st.rerun()
 
 if user_input := st.chat_input("Ask me anything!"):
     st.session_state.first_interaction = True
@@ -173,4 +173,4 @@ if user_input := st.chat_input("Ask me anything!"):
     with st.chat_message("assistant"):
         st.markdown(bot_response)
     st.session_state.messages.append(AIMessage(content=bot_response))
-    st.rerun()
+    # st.rerun()

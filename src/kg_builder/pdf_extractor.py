@@ -3,7 +3,7 @@ from typing import List, Dict
 import os
 
 class PDFExtractor:
-    def __init__(self, docs_path: str = "../docs/"):
+    def __init__(self, docs_path: str = "../../docs/"):
         self.docs_path = docs_path
 
     def extract_texts(self) -> Dict[str, str]:
