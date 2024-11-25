@@ -13,7 +13,7 @@ from langgraph.graph import MessagesState
 #     analysis: str
 #     previous_actions: List[str]
 
-# tracking with only one state handler for now, can't figure out how to manage message updates with multiple state classes
+#NOTE: tracking with only one state handler for now, can't figure out how to manage message updates with multiple state classes, but secondary for now
 
 class OverallState(MessagesState):
     question: str

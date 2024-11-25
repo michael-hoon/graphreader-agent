@@ -25,7 +25,7 @@ from .prompts import (
     SEMANTIC_ROUTER_SYSTEM,
     GENERAL_SYSTEM_PROMPT,
     MORE_INFO_SYSTEM_PROMPT,
-) #TODO i think these can be set by using a configurable file in langgraph, makes things easier
+) #TODO: i think these can be set by using a configurable file in langgraph, makes things easier
 
 from .utils import parse_function
 
@@ -73,7 +73,7 @@ def semantic_router(
     print(f"Chosen route: {chosen_route.route}")
     return {
         "route": chosen_route.route,
-        "question": state["messages"][-1].content #NOTE kinda hardcoded here since the last message is always from the Human, might have issues next time if we want to implement breakpoints in the graph, check again
+        "question": state["messages"][-1].content #NOTE: kinda hardcoded here since the last message is always from the Human, might have issues next time if we want to implement breakpoints in the graph, check again
         }
 
 ########################################
@@ -128,7 +128,7 @@ def rational_plan_node(
     if summary:
         conversation_summary = f"Summary of conversation earlier (for context): {summary}"
         rational_plan_system += conversation_summary
-    messages = [SystemMessage(content=rational_plan_system)] + state["messages"] # doing this does not affect the "messages" state in the object, so the system prompts do not get updated in the state and we do not summarise it
+    messages = [SystemMessage(content=rational_plan_system)] + state["messages"]
     rational_plan = model.invoke(messages) # returns AIMessage
     print("-" * 20)
     print(f"Step: rational_plan")
@@ -166,8 +166,8 @@ def initial_node_selection(
     question = state.get("question")
     rational_plan = state.get("rational_plan")
     initial_node_human = f"Question: {question}\nPlan: {rational_plan}\nNodes: {potential_nodes}"
-    messages = [SystemMessage(content=initial_node_system)] + [HumanMessage(content=initial_node_human)] + state["messages"] # check again later to see whether to add the nodes as a humanmessage or just add in the system prompt and do a .format() would be better
-    initial_nodes = model.with_structured_output(InitialNodes).invoke(messages) # returns AIMessage
+    messages = [SystemMessage(content=initial_node_system)] + [HumanMessage(content=initial_node_human)] + state["messages"] #TODO: check again later to see whether to add the nodes as a humanmessage or just add in the system prompt and do a .format() would be better
+    initial_nodes = model.with_structured_output(InitialNodes).invoke(messages)
 
     print("-" * 20)
     print("Step: Initial Node Selection")
@@ -206,7 +206,7 @@ def atomic_fact_check(
     rational_plan = state.get("rational_plan")
     notebook = state.get("notebook")
     previous_actions = state.get("previous_actions")
-    atomic_facts = get_atomic_facts(state.get("check_atomic_facts_queue")) # check if setting a configuration file would be better for this instead of calling all the variables
+    atomic_facts = get_atomic_facts(state.get("check_atomic_facts_queue")) #TODO: check if setting a configuration file would be better for this instead of calling all the variables
 
     human_message = f"Question: {question}\nPlan: {rational_plan}\nPrevious actions: {previous_actions}\nNotebook: {notebook}\nAtomic facts: {atomic_facts}"
     messages = [SystemMessage(content=atomic_fact_check_system)] + [HumanMessage(content=human_message)] + state["messages"]
@@ -377,7 +377,7 @@ def summarize_conversation(
     else:
         summary_message = "Create a summary of the conversation above:"
 
-    messages = state["messages"] + [HumanMessage(content=summary_message)] # Add prompt to our history
+    messages = state["messages"] + [HumanMessage(content=summary_message)]
     response = model.invoke(messages)
     delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-2]] # Delete all but the 2 most recent messages
     return {
