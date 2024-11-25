@@ -15,6 +15,11 @@ from langgraph.graph import MessagesState
 
 # tracking with only one state handler for now, can't figure out how to manage message updates with multiple state classes
 
+# note: messages state class in langgraph is defined as:
+
+# class MessagesState(TypedDict):
+#     messages: Annotated[list[AnyMessage], add_messages]
+
 class OverallState(MessagesState):
     question: str
     route: Literal["clarification", "research", "general_query"]

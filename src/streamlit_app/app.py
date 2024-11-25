@@ -2,7 +2,9 @@ import sys
 import os
 import uuid
 import asyncio
+import psycopg
 from datetime import datetime
+from postgres_db import get_connection
 
 import streamlit as st
 
@@ -36,7 +38,7 @@ GraphMind is here to help you with your research questions! Ask anything related
 
 # initialize session state for unique ID and chat history
 if "user_id" not in st.session_state:
-    st.session_state.user_id = uuid.uuid4()
+    st.session_state.user_id = str(uuid.uuid4()) # casting uuid to string type for postgres compatibility
 
 if "messages" not in st.session_state:
     st.session_state.messages = [AIMessage(content="Hello! How can I help you today?")]
@@ -51,6 +53,10 @@ if "first_interaction" not in st.session_state:
 # state for feedback handling
 if "feedback_states" not in st.session_state:
     st.session_state.feedback_states = {}
+
+# handling postgresql connection
+if "db_connection" not in st.session_state:
+    st.session_state.db_connection = get_connection()
 
 # create a new container for streaming messages only, and give it context
 st_callback = get_streamlit_cb(st.container())
@@ -110,6 +116,12 @@ with st.sidebar:
         mime="application/json",
         icon="📥",
     )
+    
+    st.header("Conversation ID")
+    st.markdown(
+            f"Conversation ID: **{st.session_state.user_id}**",
+            help=f"Set URL query parameter ?convo_id={st.session_state.user_id} to continue this conversation",
+        )
 
 # display chat messages from history
 for index, message in enumerate(st.session_state.messages):
