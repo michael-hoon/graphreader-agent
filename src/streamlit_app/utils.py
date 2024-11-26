@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+import time
 from datetime import datetime
 from typing import List
 
@@ -34,6 +35,7 @@ def log_feedback(feedback_value: int, index: int) -> None:
     logger.info(activity)
     
     st.toast("Feedback submitted successfully.", icon="👌")
+    time.sleep(2)
 
     if isinstance(current_message, AIMessage):
         if "feedback" not in current_message.additional_kwargs:
