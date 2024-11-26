@@ -84,7 +84,8 @@ langchain-ollama==0.2.0
 langchain-openai==0.2.3
 langchain-text-splitters==0.3.0
 langgraph==0.2.39
-langgraph-checkpoint==2.0.1
+langgraph-checkpoint==2.0.5
+langgraph-checkpoint-postgres==2.0.3
 langgraph-sdk==0.1.33
 langsmith==0.1.131
 markdown-it-py==3.0.0
@@ -144,6 +145,9 @@ posthog==3.7.0
 prompt_toolkit==3.0.48
 protobuf==4.25.5
 psutil==6.0.0
+psycopg==3.2.3
+psycopg-binary==3.2.3
+psycopg-pool==3.2.4
 ptyprocess==0.7.0
 pure_eval==0.2.3
 py==1.11.0
@@ -188,7 +192,8 @@ soupsieve==2.6
 SQLAlchemy==2.0.35
 stack-data==0.6.3
 starlette==0.41.0
-streamlit==1.39.0
+streamlit==1.40.0
+streamlit-pills==0.3.0
 sympy==1.13.1
 tenacity==8.5.0
 textdistance==4.6.3
