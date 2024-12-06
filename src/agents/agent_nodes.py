@@ -1,3 +1,14 @@
+from typing import Dict, List
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+from langchain_community.graphs import Neo4jGraph
+from langchain_community.vectorstores import Neo4jVector
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+
 from .state import (
     OverallState,
     Router,
@@ -14,7 +25,6 @@ from .kg_queries import (
     get_previous_chunk_id,
     get_chunk,
 )
-
 from .prompts import (
     RATIONAL_PLAN_SYSTEM,
     INITIAL_NODE_SYSTEM,
@@ -29,20 +39,11 @@ from .prompts import (
 
 from .utils import parse_function
 
-from typing import Dict, List
-from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-
-from langchain_community.graphs import Neo4jGraph
-from langchain_community.vectorstores import Neo4jVector
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
-
 load_dotenv()
 
 model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, streaming=True)
+# model = ChatOllama(model="qwen2.5:32b")
+# embeddings = OllamaEmbeddings(model="nomic-embed-text")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 neo4j_graph = Neo4jGraph(refresh_schema=False)
 
@@ -52,29 +53,30 @@ neo4j_graph = Neo4jGraph(refresh_schema=False)
 
 def semantic_router(
         state: OverallState,
-        semantic_router_system: str=SEMANTIC_ROUTER_SYSTEM
+        semantic_router_system: str = SEMANTIC_ROUTER_SYSTEM
     ) -> OverallState:
-    """Analyze the user's query and determine the appropriate routing.
-
-    This function uses a language model to classify the user's query and decide how to route it
-    within the conversation flow.
+    """
+    Routes the user's query to the appropriate node.
 
     Args:
-        state (AgentState): The current state of the agent, including conversation history.
-        config (RunnableConfig): Configuration with the model used for query analysis.
+        state (OverallState): The current state of the conversation: messages.
+        semantic_router_system (str): System message for the semantic router.
 
     Returns:
-        dict[str, Router]: A dictionary containing the 'router' key with the classification result (classification type).
+        OverallState: Updated state with question and chosen route.
     """
     messages = [SystemMessage(content=semantic_router_system)] + state["messages"]
     chosen_route = model.with_structured_output(Router).invoke(messages)
+
     print("-" * 20)
     print("Step: Routing Query")
+    print(chosen_route)
     print(f"Chosen route: {chosen_route.route}")
+
     return {
         "route": chosen_route.route,
-        "question": state["messages"][-1].content #NOTE: kinda hardcoded here since the last message is always from the Human, might have issues next time if we want to implement breakpoints in the graph, check again
-        }
+        "question": state["messages"][-1].content #NOTE: assumes last message is always from the Human
+    }
 
 ########################################
 # General Query Node
@@ -82,15 +84,26 @@ def semantic_router(
 
 def general_query(
         state: OverallState,
-        general_system_prompt: str=GENERAL_SYSTEM_PROMPT
+        general_system_prompt: str = GENERAL_SYSTEM_PROMPT
     ) -> OverallState:
+    """
+    Handles general queries from the user.
+
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route.
+        general_system_prompt (str): System message for general queries.
+
+    Returns:
+        OverallState: Updated state with the general response.
+    """
     question = state.get("question")
     messages = [SystemMessage(content=general_system_prompt)] + [HumanMessage(content=question)] + state["messages"]
-
     general_reply = model.invoke(messages)
+
     print("-" * 20)
     print("Step: General Query")
     print(f"General query response: {general_reply.content}")
+
     return {
         "messages": [general_reply],
         "answer": general_reply.content,
@@ -102,15 +115,26 @@ def general_query(
 
 def clarification(
         state: OverallState,
-        more_info_system_prompt: str=MORE_INFO_SYSTEM_PROMPT
+        more_info_system_prompt: str = MORE_INFO_SYSTEM_PROMPT
     ) -> OverallState:
+    """
+    Provides clarification for ambiguous or incomplete queries.
+
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route.
+        more_info_system_prompt (str): System prompt for clarification.
+
+    Returns:
+        OverallState: Updated state with clarification response.
+    """
     question = state.get("question")
     messages = [SystemMessage(content=more_info_system_prompt)] + [HumanMessage(content=question)] + state["messages"]
-
     clarification_reply = model.invoke(messages)
+
     print("-" * 20)
     print("Step: Clarification")
     print(f"Clarification response: {clarification_reply.content}")
+
     return {
         "messages": [clarification_reply],
         "answer": clarification_reply.content,
@@ -122,28 +146,38 @@ def clarification(
 
 def rational_plan_node(
         state: OverallState, 
-        rational_plan_system: str=RATIONAL_PLAN_SYSTEM
+        rational_plan_system: str = RATIONAL_PLAN_SYSTEM
         ) -> OverallState:
+    """
+    Creates a step by step rational plan for query resolution.
+
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route.
+        rational_plan_system (str): System prompt for planning.
+
+    Returns:
+        OverallState: Updated state with the rational plan.
+    """
     summary = state.get("summary", "")
     if summary:
         conversation_summary = f"Summary of conversation earlier (for context): {summary}"
         rational_plan_system += conversation_summary
     messages = [SystemMessage(content=rational_plan_system)] + state["messages"]
-    rational_plan = model.invoke(messages) # returns AIMessage
+    rational_plan = model.invoke(messages)
+
     print("-" * 20)
     print(f"Step: rational_plan")
     print(f"Rational plan: {rational_plan.content}")
+
     return {
-        "rational_plan": rational_plan.content, # as rational_plan is now an AIMessage object since we're not passing StrOutputParser() anymore
-        "previous_actions": ["rational_plan"], # here we just append it into the previous_actions list, since again, we defined it with an `add` reducer function
-        "messages": [rational_plan] # this will be a AIMessage List, which will then be added into the messages state (add_messages reducer function) since we are inheriting from the MessagesState class for OverallState
+        "rational_plan": rational_plan.content,
+        "previous_actions": ["rational_plan"], #NOTE: here we append it into the previous_actions list, since again, we defined it with an `add` reducer function
+        "messages": [rational_plan] #NOTE: similarly this will be a AIMessage List, which will then be added into the messages state (add_messages reducer function) since we are inheriting from the MessagesState class for OverallState
     }
 
 ########################################
 # Initial Node Selection
 ########################################
-
-# create and use a vector index to retrieve a list of input nodes for the prompt.
 
 neo4j_vector = Neo4jVector.from_existing_graph(
     embedding=embeddings,
@@ -155,25 +189,45 @@ neo4j_vector = Neo4jVector.from_existing_graph(
 )
 
 def get_potential_nodes(question: str) -> List[str]:
+    """
+    Performs similarity search with vector index created from the graph.
+    
+    Args:
+        question (str): Input query from user.
+    
+    Returns:
+        List: initial nodes for graph traversal.
+    """
     data = neo4j_vector.similarity_search(question, k=50)
     return [el.page_content for el in data]
 
 def initial_node_selection(
         state: OverallState,
-        initial_node_system: str=INITIAL_NODE_SYSTEM,
+        initial_node_system: str = INITIAL_NODE_SYSTEM,
     ) -> OverallState:
+    """
+    Select initial nodes based on a user's question and rational plan.
+
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route, rational_plan.
+        initial_node_system (str): System-level prompt for initial node selection.
+
+    Returns:
+        Overallstate: Updated state with the selected initial nodes.
+    """
     potential_nodes = get_potential_nodes(state.get("question"))
     question = state.get("question")
     rational_plan = state.get("rational_plan")
     initial_node_human = f"Question: {question}\nPlan: {rational_plan}\nNodes: {potential_nodes}"
-    messages = [SystemMessage(content=initial_node_system)] + [HumanMessage(content=initial_node_human)] + state["messages"] #TODO: check again later to see whether to add the nodes as a humanmessage or just add in the system prompt and do a .format() would be better
+    messages = [SystemMessage(content=initial_node_system)] + [HumanMessage(content=initial_node_human)] + state["messages"]
     initial_nodes = model.with_structured_output(InitialNodes).invoke(messages)
 
     print("-" * 20)
     print("Step: Initial Node Selection")
+    print(initial_nodes)
     print(f"Initial nodes: {initial_nodes.initial_nodes}")
 
-    # paper uses 5 initial nodes
+    #NOTE: original paper uses 5 initial nodes
     check_atomic_facts_queue = [
         el.key_element
         for el in sorted(
@@ -197,11 +251,13 @@ def atomic_fact_check(
         state: OverallState,
         atomic_fact_check_system: str=ATOMIC_FACT_CHECK_SYSTEM
     ) -> OverallState:
+
     print("-" * 20)
     print(f"Step: atomic_fact_check")
     print(
         f"Reading atomic facts about: {state.get('check_atomic_facts_queue')}"
     )
+
     question = state.get("question")
     rational_plan = state.get("rational_plan")
     notebook = state.get("notebook")
@@ -214,11 +270,13 @@ def atomic_fact_check(
     atomic_facts_results = model.with_structured_output(AtomicFactOutput).invoke(messages)
 
     notebook = atomic_facts_results.updated_notebook
+
     print(
         f"Rational for next action after atomic check: {atomic_facts_results.rational_next_action}"
     )
     chosen_action = parse_function(atomic_facts_results.chosen_action)
     print(f"Chosen action: {chosen_action}")
+
     response = {
         "notebook": notebook,
         "chosen_action": chosen_action.get("function_name"),
@@ -227,6 +285,7 @@ def atomic_fact_check(
             f"atomic_fact_check({state.get('check_atomic_facts_queue')})"
         ],
     }
+
     if chosen_action.get("function_name") == "stop_and_read_neighbor":
         neighbors = get_neighbors_by_key_element(
             state.get("check_atomic_facts_queue")
