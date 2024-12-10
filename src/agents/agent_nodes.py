@@ -41,8 +41,8 @@ from .utils import parse_function
 
 load_dotenv()
 
-model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, streaming=True)
-# model = ChatOllama(model="qwen2.5:32b")
+# model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, streaming=True)
+model = ChatOllama(model="qwen2.5:32b")
 # embeddings = OllamaEmbeddings(model="nomic-embed-text")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 neo4j_graph = Neo4jGraph(refresh_schema=False)
@@ -251,7 +251,16 @@ def atomic_fact_check(
         state: OverallState,
         atomic_fact_check_system: str=ATOMIC_FACT_CHECK_SYSTEM
     ) -> OverallState:
+    """
+    Checks relevant Atomic Facts based on the relevant initial nodes selected. Appends in virtual "notebook" with relevant information.
+    
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route, rational_plan, check_atomic_facts_queue, previous_actions.
+        atomic_fact_check_system (str): System-level prompt for atomic fact check.
 
+    Returns:
+        OverallState: Updated state with notebook, previous_action, check queue, and next chosen action.
+    """
     print("-" * 20)
     print(f"Step: atomic_fact_check")
     print(
@@ -303,6 +312,16 @@ def chunk_check(
         state: OverallState,
         chunk_read_system: str=CHUNK_READ_SYSTEM,
     ) -> OverallState:
+    """
+    Checks relevant text chunks based on the relevant Atomic Facts selected. Appends in virtual "notebook" with more relevant information.
+    
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route, rational_plan, check_atomic_facts_queue, previous_actions, notebook, check queue, and chosen action.
+        chunk_read_system (str): System-level prompt for reading relevant text chunks.
+
+    Returns:
+        OverallState: Updated state with notebook, previous_action, and next chosen action.
+    """
     check_chunks_queue = state.get("check_chunks_queue")
     chunk_id = check_chunks_queue.pop()
     print("-" * 20)
@@ -326,11 +345,13 @@ def chunk_check(
     )
     chosen_action = parse_function(read_chunk_results.chosen_action)
     print(f"Chosen action: {chosen_action}")
+
     response = {
         "notebook": notebook,
         "chosen_action": chosen_action.get("function_name"),
         "previous_actions": [f"read_chunks({chunk_id})"],
     }
+
     if chosen_action.get("function_name") == "read_subsequent_chunk":
         subsequent_id = get_subsequent_chunk_id(chunk_id)
         check_chunks_queue.append(subsequent_id)
@@ -360,6 +381,16 @@ def neighbor_select(
         state: OverallState,
         neighbor_select_system: str=NEIGHBOR_SELECT_SYSTEM,
     ) -> OverallState:
+    """
+    Checks neighboring nodes to find more relevant information to answer query.
+    
+    Args:
+        state (OverallState): The current state of the conversation: messages, question, route, rational_plan, check_atomic_facts_queue, previous_actions, notebook, check queue, and chosen action.
+        neighbor_select_system (str): System-level prompt for selecting neighboring nodes.
+
+    Returns:
+        OverallState: Updated state with neighbor_check_queue, previous_action, and next chosen_action.
+    """
     print("-" * 20)
     print(f"Step: neighbor select")
     print(f"Possible candidates: {state.get('neighbor_check_queue')}")
@@ -402,6 +433,16 @@ def answer_reasoning(
         state: OverallState,
         answer_reasoning_system: str=ANSWER_REASONING_SYSTEM
     ) -> OverallState:
+    """
+    Given all the information in the current notebook, agent will use updated information to reason the answer to the original user query.
+    
+    Args:
+        state (OverallState): The current state of the conversation, including all the states.
+        answer_reasoning_system (str): System-level prompt for answer reasoning.
+
+    Returns:
+        OverallState: Updated state with reasoned answer, answer analysis, previous_actions, and updating messages state for conversational history.
+    """
     print("-" * 20)
     print("Step: Answer Reasoning")
 
@@ -427,6 +468,15 @@ def answer_reasoning(
 def summarize_conversation(
         state: OverallState
     ) -> OverallState:
+    """
+    Given the current conversation history based on the messages state of the graph, summarise the current conversation and extract key points.
+    
+    Args:
+        state (OverallState): The current state of the conversation, including all the states.
+
+    Returns:
+        OverallState: Updated state with summary of conversation, and deleting all previous messages in the state except the most recent two (AI and Human)
+    """
     summary = state.get("summary", "")
     if summary:
         summary_message = (
