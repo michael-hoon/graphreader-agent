@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, cast
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from langchain_community.graphs import Neo4jGraph
@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
+from langchain_core.runnables.config import RunnableConfig
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 
 from .state import (
@@ -25,26 +26,22 @@ from .kg_queries import (
     get_previous_chunk_id,
     get_chunk,
 )
-from .prompts import (
-    RATIONAL_PLAN_SYSTEM,
-    INITIAL_NODE_SYSTEM,
-    ATOMIC_FACT_CHECK_SYSTEM,
-    CHUNK_READ_SYSTEM,
-    NEIGHBOR_SELECT_SYSTEM,
-    ANSWER_REASONING_SYSTEM,
-    SEMANTIC_ROUTER_SYSTEM,
-    GENERAL_SYSTEM_PROMPT,
-    MORE_INFO_SYSTEM_PROMPT,
-) #TODO: i think these can be set by using a configurable file in langgraph, makes things easier
 
-from .utils import parse_function
+from .utils import (
+    parse_function, 
+    match_llm,
+    match_embedding_model,
+)
+
+from .configuration import AgentConfiguration
 
 load_dotenv()
 
-# model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, streaming=True)
-model = ChatOllama(model="qwen2.5:32b")
-# embeddings = OllamaEmbeddings(model="nomic-embed-text")
+model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+# ollama_model = ChatOllama(model="qwen2.5:32b")
+# ollama_embeddings = OllamaEmbeddings(model="nomic-embed-text")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
 neo4j_graph = Neo4jGraph(refresh_schema=False)
 
 ########################################
@@ -53,7 +50,8 @@ neo4j_graph = Neo4jGraph(refresh_schema=False)
 
 def semantic_router(
         state: OverallState,
-        semantic_router_system: str = SEMANTIC_ROUTER_SYSTEM
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Routes the user's query to the appropriate node.
@@ -65,8 +63,12 @@ def semantic_router(
     Returns:
         OverallState: Updated state with question and chosen route.
     """
-    messages = [SystemMessage(content=semantic_router_system)] + state["messages"]
-    chosen_route = model.with_structured_output(Router).invoke(messages)
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.router_model)
+    messages = [SystemMessage(content=configuration.rational_plan_system_prompt)] + state.messages
+    chosen_route = cast(
+        Router, model.with_structured_output(Router).invoke(messages)
+    )
 
     print("-" * 20)
     print("Step: Routing Query")
@@ -84,7 +86,8 @@ def semantic_router(
 
 def general_query(
         state: OverallState,
-        general_system_prompt: str = GENERAL_SYSTEM_PROMPT
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Handles general queries from the user.
@@ -96,8 +99,9 @@ def general_query(
     Returns:
         OverallState: Updated state with the general response.
     """
-    question = state.get("question")
-    messages = [SystemMessage(content=general_system_prompt)] + [HumanMessage(content=question)] + state["messages"]
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.router_model)
+    messages = [SystemMessage(content=configuration.general_system_prompt)] + [HumanMessage(content=state.question)] + state.messages
     general_reply = model.invoke(messages)
 
     print("-" * 20)
@@ -115,7 +119,8 @@ def general_query(
 
 def clarification(
         state: OverallState,
-        more_info_system_prompt: str = MORE_INFO_SYSTEM_PROMPT
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Provides clarification for ambiguous or incomplete queries.
@@ -127,8 +132,9 @@ def clarification(
     Returns:
         OverallState: Updated state with clarification response.
     """
-    question = state.get("question")
-    messages = [SystemMessage(content=more_info_system_prompt)] + [HumanMessage(content=question)] + state["messages"]
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.router_model)
+    messages = [SystemMessage(content=configuration.more_info_system_prompt)] + [HumanMessage(content=state.question)] + state.messages
     clarification_reply = model.invoke(messages)
 
     print("-" * 20)
@@ -146,7 +152,8 @@ def clarification(
 
 def rational_plan_node(
         state: OverallState, 
-        rational_plan_system: str = RATIONAL_PLAN_SYSTEM
+        *,
+        config: RunnableConfig,
         ) -> OverallState:
     """
     Creates a step by step rational plan for query resolution.
@@ -158,11 +165,13 @@ def rational_plan_node(
     Returns:
         OverallState: Updated state with the rational plan.
     """
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.research_model)
     summary = state.get("summary", "")
     if summary:
         conversation_summary = f"Summary of conversation earlier (for context): {summary}"
         rational_plan_system += conversation_summary
-    messages = [SystemMessage(content=rational_plan_system)] + state["messages"]
+    messages = [SystemMessage(content=configuration.rational_plan_system_prompt)] + state.messages
     rational_plan = model.invoke(messages)
 
     print("-" * 20)
@@ -203,7 +212,8 @@ def get_potential_nodes(question: str) -> List[str]:
 
 def initial_node_selection(
         state: OverallState,
-        initial_node_system: str = INITIAL_NODE_SYSTEM,
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Select initial nodes based on a user's question and rational plan.
@@ -215,11 +225,11 @@ def initial_node_selection(
     Returns:
         Overallstate: Updated state with the selected initial nodes.
     """
-    potential_nodes = get_potential_nodes(state.get("question"))
-    question = state.get("question")
-    rational_plan = state.get("rational_plan")
-    initial_node_human = f"Question: {question}\nPlan: {rational_plan}\nNodes: {potential_nodes}"
-    messages = [SystemMessage(content=initial_node_system)] + [HumanMessage(content=initial_node_human)] + state["messages"]
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.research_model)
+    potential_nodes = get_potential_nodes(state.question)
+    initial_node_human = f"Question: {state.question}\nPlan: {state.rational_plan}\nNodes: {potential_nodes}"
+    messages = [SystemMessage(content=configuration.initial_node_system_prompt)] + [HumanMessage(content=initial_node_human)] + state.messages
     initial_nodes = model.with_structured_output(InitialNodes).invoke(messages)
 
     print("-" * 20)
@@ -249,7 +259,8 @@ def initial_node_selection(
 
 def atomic_fact_check(
         state: OverallState,
-        atomic_fact_check_system: str=ATOMIC_FACT_CHECK_SYSTEM
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Checks relevant Atomic Facts based on the relevant initial nodes selected. Appends in virtual "notebook" with relevant information.
@@ -263,18 +274,14 @@ def atomic_fact_check(
     """
     print("-" * 20)
     print(f"Step: atomic_fact_check")
-    print(
-        f"Reading atomic facts about: {state.get('check_atomic_facts_queue')}"
-    )
+    print(f"Reading atomic facts about: {state.get('check_atomic_facts_queue')}")
 
-    question = state.get("question")
-    rational_plan = state.get("rational_plan")
-    notebook = state.get("notebook")
-    previous_actions = state.get("previous_actions")
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.research_model)
     atomic_facts = get_atomic_facts(state.get("check_atomic_facts_queue")) #TODO: check if setting a configuration file would be better for this instead of calling all the variables
 
-    human_message = f"Question: {question}\nPlan: {rational_plan}\nPrevious actions: {previous_actions}\nNotebook: {notebook}\nAtomic facts: {atomic_facts}"
-    messages = [SystemMessage(content=atomic_fact_check_system)] + [HumanMessage(content=human_message)] + state["messages"]
+    human_message = f"Question: {state.question}\nPlan: {state.rational_plan}\nPrevious actions: {state.previous_actions}\nNotebook: {state.notebook}\nAtomic facts: {state.atomic_facts}"
+    messages = [SystemMessage(content=configuration.atomic_fact_check_system_prompt)] + [HumanMessage(content=human_message)] + state.messages
 
     atomic_facts_results = model.with_structured_output(AtomicFactOutput).invoke(messages)
 
@@ -310,7 +317,8 @@ def atomic_fact_check(
 
 def chunk_check(
         state: OverallState,
-        chunk_read_system: str=CHUNK_READ_SYSTEM,
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Checks relevant text chunks based on the relevant Atomic Facts selected. Appends in virtual "notebook" with more relevant information.
@@ -322,20 +330,16 @@ def chunk_check(
     Returns:
         OverallState: Updated state with notebook, previous_action, and next chosen action.
     """
-    check_chunks_queue = state.get("check_chunks_queue")
-    chunk_id = check_chunks_queue.pop()
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.research_model)
+
+    chunk_id = state.check_chunks_queue.pop()
     print("-" * 20)
     print(f"Step: read chunk({chunk_id})")
-
     chunks_text = get_chunk(chunk_id)
 
-    question = state.get("question")
-    rational_plan = state.get("rational_plan")
-    notebook = state.get("notebook")
-    previous_actions = state.get("previous_actions")
-    chunk = chunks_text
-    human_message = f"Question: {question}\nPlan: {rational_plan}\nPrevious actions: {previous_actions}\nNotebook: {notebook}\nChunk: {chunk}"
-    messages = [SystemMessage(content=chunk_read_system)] + [HumanMessage(content=human_message)] + state["messages"]
+    human_message = f"Question: {state.question}\nPlan: {state.rational_plan}\nPrevious actions: {state.previous_actions}\nNotebook: {state.notebook}\nChunk: {chunks_text}"
+    messages = [SystemMessage(content=configuration.chunk_read_system_prompt)] + [HumanMessage(content=human_message)] + state.messages
 
     read_chunk_results = model.with_structured_output(ChunkOutput).invoke(messages)
 
@@ -379,7 +383,8 @@ def chunk_check(
 
 def neighbor_select(
         state: OverallState,
-        neighbor_select_system: str=NEIGHBOR_SELECT_SYSTEM,
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Checks neighboring nodes to find more relevant information to answer query.
@@ -391,18 +396,15 @@ def neighbor_select(
     Returns:
         OverallState: Updated state with neighbor_check_queue, previous_action, and next chosen_action.
     """
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.research_model)
+
     print("-" * 20)
     print(f"Step: neighbor select")
     print(f"Possible candidates: {state.get('neighbor_check_queue')}")
 
-    question = state.get("question")
-    rational_plan = state.get("rational_plan")
-    notebook = state.get("notebook")
-    nodes = state.get("neighbor_check_queue")
-    previous_actions = state.get("previous_actions")
-
-    human_message = f"Question: {question}\nPlan: {rational_plan}\nPrevious actions: {previous_actions}\nNotebook: {notebook}\nNeighbor nodes: {nodes}"
-    messages = [SystemMessage(content=neighbor_select_system)] + [HumanMessage(content=human_message)] + state["messages"]
+    human_message = f"Question: {state.question}\nPlan: {state.rational_plan}\nPrevious actions: {state.previous_actions}\nNotebook: {state.notebook}\nNeighbor nodes: {state.neighbor_check_queue}"
+    messages = [SystemMessage(content=configuration.neighbor_select_system_prompt)] + [HumanMessage(content=human_message)] + state.messages
 
     neighbor_select_results = model.with_structured_output(NeighborOutput).invoke(messages)
 
@@ -411,6 +413,7 @@ def neighbor_select(
     )
     chosen_action = parse_function(neighbor_select_results.chosen_action)
     print(f"Chosen action: {chosen_action}")
+
     # Empty neighbor select queue
     response = {
         "chosen_action": chosen_action.get("function_name"),
@@ -431,7 +434,8 @@ def neighbor_select(
 
 def answer_reasoning(
         state: OverallState,
-        answer_reasoning_system: str=ANSWER_REASONING_SYSTEM
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Given all the information in the current notebook, agent will use updated information to reason the answer to the original user query.
@@ -443,15 +447,15 @@ def answer_reasoning(
     Returns:
         OverallState: Updated state with reasoned answer, answer analysis, previous_actions, and updating messages state for conversational history.
     """
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.reasoning_model)
+
     print("-" * 20)
     print("Step: Answer Reasoning")
 
-    question = state.get("question")
-    notebook = state.get("notebook")
+    human_message = f"Question: {state.question}\nNotebook: {state.notebook}"
 
-    human_message = f"Question: {question}\nNotebook: {notebook}"
-
-    messages = [SystemMessage(content=answer_reasoning_system)] + [HumanMessage(content=human_message)] + state["messages"]
+    messages = [SystemMessage(content=configuration.answer_reasoning_system_prompt)] + [HumanMessage(content=human_message)] + state.messages
 
     final_answer = model.with_structured_output(AnswerReasonOutput).invoke(messages)
     return {
@@ -467,6 +471,8 @@ def answer_reasoning(
 
 def summarize_conversation(
         state: OverallState
+        *,
+        config: RunnableConfig,
     ) -> OverallState:
     """
     Given the current conversation history based on the messages state of the graph, summarise the current conversation and extract key points.
@@ -477,6 +483,8 @@ def summarize_conversation(
     Returns:
         OverallState: Updated state with summary of conversation, and deleting all previous messages in the state except the most recent two (AI and Human)
     """
+    configuration = AgentConfiguration.from_runnable_config(config)
+    model = match_llm(configuration.router_model)
     summary = state.get("summary", "")
     if summary:
         summary_message = (
@@ -486,7 +494,7 @@ def summarize_conversation(
     else:
         summary_message = "Create a summary of the conversation above:"
 
-    messages = state["messages"] + [HumanMessage(content=summary_message)]
+    messages = state.messages + [HumanMessage(content=summary_message)]
     response = model.invoke(messages)
     delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-2]] # Delete all but the 2 most recent messages
     return {

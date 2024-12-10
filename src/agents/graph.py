@@ -32,6 +32,15 @@ load_dotenv()
 def atomic_fact_condition(
         state: OverallState,
     ) -> Literal["neighbor_select", "chunk_check"]:
+    """
+    Determine the next step to take after Atomic Fact check based on current gathered information in notebook.
+
+    Args:
+        state (OverallState): The current state of the agent.
+
+    Returns:
+        Literal["neighbor_select", "chunk_check"]: The next step to take.
+    """
     if state.get("chosen_action") == "stop_and_read_neighbor":
         return "neighbor_select"
     elif state.get("chosen_action") == "read_chunk":
@@ -40,6 +49,15 @@ def atomic_fact_condition(
 def chunk_condition(
         state: OverallState,
     ) -> Literal["answer_reasoning", "chunk_check", "neighbor_select"]:
+    """
+    Determine the next step to take after Chunk Check based on current gathered information in notebook. Terminates and reasons answer if sufficient information gathered.
+
+    Args:
+        state (OverallState): The current state of the agent.
+
+    Returns:
+        Literal["answer_reasoning", "chunk_check", "neighbor_select"]: The next step to take.
+    """
     if state.get("chosen_action") == "termination":
         return "answer_reasoning"
     elif state.get("chosen_action") in ["read_subsequent_chunk", "read_previous_chunk", "search_more"]:
@@ -50,6 +68,15 @@ def chunk_condition(
 def neighbor_condition(
         state: OverallState,
     ) -> Literal["answer_reasoning", "atomic_fact_check"]:
+    """
+    Determine the next step to take after Neighbor Check based on current gathered information in notebook. Terminates and reasons answer if sufficient information gathered.
+
+    Args:
+        state (OverallState): The current state of the agent.
+
+    Returns:
+        Literal["answer_reasoning", "atomic_fact_check"]: The next step to take.
+    """
     if state.get("chosen_action") == "termination":
         return "answer_reasoning"
     elif state.get("chosen_action") == "read_neighbor_node":
@@ -58,7 +85,8 @@ def neighbor_condition(
 def route_query_condition(
     state: OverallState,
     ) -> Literal["rational_plan_node", "clarification", "general_query"]:
-    """Determine the next step based on the query classification.
+    """
+    Determine the next step based on the query classification.
 
     Args:
         state (OverallState): The current state of the agent, including the router's classification.
@@ -81,9 +109,17 @@ def route_query_condition(
 def summary_condition(
         state: OverallState,
     ) -> Literal["summarize_conversation", END]:
-    messages = state["messages"]
+    """
+    Determine whether to summarize existing conversation history from current session. Summarize if there are more than 3 turns (6 messages)
+
+    Args:
+        state (OverallState): The current state of the agent.
+
+    Returns:
+        Literal["summarize_conversation", END]: The next step to take.
+    """
     # summarise only if conversation exceeds 3 turns (6 messages)
-    if len(messages) > 6:
+    if len(state.messages) > 6:
         return "summarize_conversation"
     return END
     
@@ -144,7 +180,7 @@ graph = agent.compile(
 
 def chatbot_response(
         input_text: str,
-        config: dict = None,
+        # config: dict = None,
     ) -> str:
     """
     Generate a response from the chatbot based on the user's input text.
@@ -160,5 +196,6 @@ def chatbot_response(
     # ensure that callables is a list as you can have multiple callbacks
     if not isinstance(config.get("callbacks"), list):
         raise TypeError("callables must be a list")
-    output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]}, config=config)
+    # output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]}, config=config)
+    output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]})
     return output_text['messages'][-1].content
