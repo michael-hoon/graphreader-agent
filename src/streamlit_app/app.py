@@ -9,6 +9,7 @@ import streamlit as st
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from agents.graph import chatbot_response
+from agents.configuration import BaseConfiguration
 from st_callable_util import get_streamlit_cb
 from kg_builder.run_pipeline import process_kg
 from kg_builder.kg_reset import Neo4jResetter
@@ -19,6 +20,7 @@ from utils import (
 )
 
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.runnables.config import RunnableConfig
 
 st.set_page_config(
     page_title="GraphMind: Your Personal AI Research Assistant",
@@ -60,13 +62,15 @@ config = {
     "callbacks": [st_callback],
 }
 
+# base_config = BaseConfiguration.from_runnable_config(config)
+
 # sidebar setup
 with st.sidebar:
     st.image("../../static/graphmind_logo.jpg")
     st.caption("Your AI-powered research assistant for multi-hop reasoning and long-context queries.")
     
     st.header("LLM Management")
-    llm = st.selectbox("Select LLM Model", ["llama3.1", "gpt-4o-mini", "Qwen2.5-Coder"])
+    model = st.selectbox("Select LLM Model", ["llama3.1", "gpt-4o-mini", "Qwen2.5-Coder"])
     embeddings = st.selectbox("Select Embedding Model", ["text-embedding-3-small", "nomic-embed-text"])
 
     st.header("Graph Management")
@@ -110,6 +114,12 @@ with st.sidebar:
         mime="application/json",
         icon="📥",
     )
+
+    st.header("Conversation ID")
+    st.markdown(
+            f"Conversation ID: **{st.session_state.user_id}**",
+            help=f"Set URL query parameter ?convo_id={st.session_state.user_id} to continue this conversation",
+        )
 
 # display chat messages from history
 for index, message in enumerate(st.session_state.messages):
@@ -155,7 +165,7 @@ if not st.session_state.first_interaction:
 
         with st.spinner(text="Thinking..."):
             bot_response = chatbot_response(input_text=selected_input, config=config)
-        
+
         with st.chat_message("assistant"):
             st.markdown(bot_response)
         st.session_state.messages.append(AIMessage(content=bot_response))

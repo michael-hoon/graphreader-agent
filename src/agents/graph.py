@@ -4,7 +4,13 @@ from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from langchain_core.messages import SystemMessage, HumanMessage, RemoveMessage
+from langchain_core.messages import (
+    SystemMessage, 
+    HumanMessage, 
+    RemoveMessage,
+)
+
+from langchain_core.runnables import RunnableConfig
 
 from .state import (
     OverallState,
@@ -22,6 +28,8 @@ from .agent_nodes import (
     neighbor_select,
     summarize_conversation,
 )
+
+from .configuration import AgentConfiguration
 
 load_dotenv()
 
@@ -127,7 +135,7 @@ def summary_condition(
 # LangGraph Control Flow
 ####################################################
 
-agent = StateGraph(OverallState)
+agent = StateGraph(OverallState, config_schema=AgentConfiguration)
 
 agent.add_node(semantic_router)
 agent.add_node(clarification)
@@ -180,22 +188,22 @@ graph = agent.compile(
 
 def chatbot_response(
         input_text: str,
-        # config: dict = None,
+        config: RunnableConfig=None,
     ) -> str:
     """
     Generate a response from the chatbot based on the user's input text.
     
     Args:
         input_text (str): The user's input text to generate a response for.
-        config (dict, optional): Configuration settings for the chatbot. Defaults to None.
+        config (RunnableConfig): Configuration settings for the chatbot. Defaults to None.
         
     Returns:
         str: The chatbot's response to the user's input text.
     """
 
     # ensure that callables is a list as you can have multiple callbacks
-    if not isinstance(config.get("callbacks"), list):
-        raise TypeError("callables must be a list")
-    # output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]}, config=config)
-    output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]})
+    # if not isinstance(config.get("callbacks"), list):
+    #     raise TypeError("callables must be a list")
+    output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]}, config=config)
+    # output_text = graph.invoke({'messages': [HumanMessage(content=input_text)]})
     return output_text['messages'][-1].content

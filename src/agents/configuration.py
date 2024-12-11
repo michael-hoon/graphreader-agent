@@ -1,4 +1,5 @@
 from typing import Any, Dict, Literal, Optional, Type, TypeVar
+from uuid import UUID
 from pydantic import BaseModel, Field
 
 from langchain_core.runnables import RunnableConfig, ensure_config
@@ -30,6 +31,16 @@ class BaseConfiguration(BaseModel):
         __template_metadata__={"kind": "embeddings"},
     )
 
+    thread_id: Optional[UUID] = Field(
+        default=None,
+        description="Unique identifier for the current user thread. Set dynamically at runtime."
+    )
+
+    callbacks: Optional[list[Any]] = Field(
+        default=None,
+        description="List of callbacks to be executed during processing."
+    )
+
     @classmethod
     def from_runnable_config(
         cls: Type[T], config: Optional[RunnableConfig] = None
@@ -46,11 +57,19 @@ class BaseConfiguration(BaseModel):
         """
         config = ensure_config(config)
         configurable = config.get("configurable", {})
-        return cls(**{k: v for k, v in configurable.items() if k in cls.__fields__})
+        callbacks = config.get("callbacks", [])
+
+        # Extract fields from the class that match the config keys
+        field_keys = cls.__fields__.keys()
+        extracted_config = {k: v for k, v in configurable.items() if k in field_keys}
+        
+        # Return an instance, incorporating extracted config and callbacks
+        return cls(**extracted_config, callbacks=callbacks)
+    #     # return cls(**{k: v for k, v in configurable.items() if k in cls.__fields__})
 
 class AgentConfiguration(BaseConfiguration):
     """
-    The configuration for the agents.
+    The configuration for the agents, including model type and prompts.
     """
 
     # Models

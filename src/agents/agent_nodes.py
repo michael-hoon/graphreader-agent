@@ -33,11 +33,14 @@ from .utils import (
     match_embedding_model,
 )
 
-from .configuration import AgentConfiguration
+from .configuration import (
+    AgentConfiguration,
+    BaseConfiguration,
+)
 
 load_dotenv()
 
-model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+# model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 # ollama_model = ChatOllama(model="qwen2.5:32b")
 # ollama_embeddings = OllamaEmbeddings(model="nomic-embed-text")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -187,6 +190,9 @@ def rational_plan_node(
 ########################################
 # Initial Node Selection
 ########################################
+
+# embedding_config = BaseConfiguration.from_runnable_config(RunnableConfig)
+# embeddings = embedding_config.embedding_model
 
 neo4j_vector = Neo4jVector.from_existing_graph(
     embedding=embeddings,
@@ -470,7 +476,7 @@ def answer_reasoning(
 ########################################
 
 def summarize_conversation(
-        state: OverallState
+        state: OverallState,
         *,
         config: RunnableConfig,
     ) -> OverallState:
