@@ -19,8 +19,7 @@ GraphMind is an advanced AI research assistant leveraging LangGraph for agent or
     - [4. Install Dependencies](#4-install-dependencies)
     - [5. Set Up Docker Containers](#5-set-up-docker-containers)
 4. [Running the Application](#running-the-application)
-5. [Contributing](#contributing)
-6. [License](#license)
+5. [References](#references)
 
 ---
 
