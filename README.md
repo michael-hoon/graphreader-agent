@@ -1,7 +1,7 @@
 # GraphMind AI Assistant
 
 <p align="center">
-    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/graphmind_logo.jpg" alt="GraphMind Logo" width="200" height="200">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/graphmind_logo.jpg" alt="GraphMind Logo" width="300" height="300">
 </p>
 
 GraphMind is an advanced AI research assistant leveraging LangGraph for agent orchestration and Neo4j to construct and query a knowledge graph of research papers. This repository contains the codebase and setup instructions for deploying GraphMind locally.
@@ -39,9 +39,17 @@ GraphMind is an advanced AI research assistant leveraging LangGraph for agent or
 The underlying architecture behind the GraphMind Agentic Framework leverages the [Graphreader paper](https://arxiv.org/abs/2406.14550). The diagrams below show the proposed implementation:
 
 <p align="center">
-    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/Architecture.jpg" alt="GraphMind Proposed Architecture" width="200" height="200">
-    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/router.jpg" alt="Semantic Router Agent" width="200" height="200">
-    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/research_subgraph.jpg" alt="Research Subgraph" width="200" height="200">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/Architecture.jpg" alt="GraphMind Proposed Architecture">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/router.jpg" alt="Semantic Router Agent">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/research_subgraph.jpg" alt="Research Subgraph">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/agent_nodes.png" alt="Agent Node Architecture">
+</p>
+
+The Neo4j Knowledge Graph ontology is pre-defined and shown as follows:
+
+
+<p align="center">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/neo4j_ontology.png" alt="Neo4j Ontology">
 </p>
 
 ## Requirements
