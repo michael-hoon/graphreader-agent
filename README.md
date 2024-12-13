@@ -1,6 +1,8 @@
 # GraphMind AI Assistant
 
-![GraphMind](https://github.com/michael-hoon/graphreader-agent/blob/main/static/graphmind_logo.jpg)
+<p align="center">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/graphmind_logo.jpg" alt="GraphMind Logo" width="200" height="200">
+</p>
 
 GraphMind is an advanced AI research assistant leveraging LangGraph for agent orchestration and Neo4j to construct and query a knowledge graph of research papers. This repository contains the codebase and setup instructions for deploying GraphMind locally.
 
@@ -34,11 +36,13 @@ GraphMind is an advanced AI research assistant leveraging LangGraph for agent or
 
 ## GraphMind Agent Architecture
 
-The underlying architecture behind the GraphMind Agentic Framework leverages the [Graphreader paper](https://arxiv.org/abs/2406.14550). The diagrams below show the implementation:
+The underlying architecture behind the GraphMind Agentic Framework leverages the [Graphreader paper](https://arxiv.org/abs/2406.14550). The diagrams below show the proposed implementation:
 
-![GraphMind Proposed Architecture](https://github.com/michael-hoon/graphreader-agent/blob/main/static/Architecture.jpg)
-![Semantic Router Agent](https://github.com/michael-hoon/graphreader-agent/blob/main/static/router.jpg)
-![Research Subgraph](https://github.com/michael-hoon/graphreader-agent/blob/main/static/research_subgraph.jpg)
+<p align="center">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/Architecture.jpg" alt="GraphMind Proposed Architecture" width="200" height="200">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/router.jpg" alt="Semantic Router Agent" width="200" height="200">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/research_subgraph.jpg" alt="Research Subgraph" width="200" height="200">
+</p>
 
 ## Requirements
 
@@ -107,6 +111,7 @@ This will set up:
 - **Neo4j**: Graph database for storing the knowledge graph.
 - **Ollama**: Local LLM model container.
 - **MinIO**: Local S3 object storage for PDF files.
+- **PostgreSQL**: Relational Database for miscellaneous user and session information.
 - Any additional services defined in the docker-compose.yml.- 
 
 Verify the containers are running:
