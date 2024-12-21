@@ -11,15 +11,18 @@ GraphMind is an advanced AI research assistant leveraging LangGraph for agent or
 ## Table of Contents
 
 1. [Features](#features)
-2. [Requirements](#requirements)
-3. [Setup Instructions](#setup-instructions)
-    - [1. Clone the Repository](#1-clone-the-repository)
-    - [2. Set Up the Virtual Environment](#2-set-up-the-virtual-environment)
-    - [3. Configure the `.env` File](#3-configure-the-env-file)
-    - [4. Install Dependencies](#4-install-dependencies)
-    - [5. Set Up Docker Containers](#5-set-up-docker-containers)
-4. [Running the Application](#running-the-application)
-5. [References](#references)
+2. [GraphMind Agent Architecture](#graphmind-agent-architecture)
+3. [Requirements](#requirements)
+4. [Clone the Repository](#clone-the-repository)
+5. [Container Setup](#container-setup)
+    - [Neo4j Container](#neo4j-container)
+    - [MinIO Container](#minio-container)
+6. [Setup Instructions](#setup-instructions)
+    - [1. Set Up Virtual Environment](#1-set-up-virtual-environment)
+    - [2. Configure the `.env` File](#2-configure-the-env-file)
+7. [Running the Application](#running-the-application)
+8. [Future Updates](#known-issues--future-updates)
+9. [References](#references)
 
 ---
 
@@ -147,7 +150,7 @@ cp .env.example .env
 
 Edit the file accordingly. You will require your OpenAI API key, Neo4j database and MinIO S3 storage details from before.
 
-### 3. Running the Application
+## Running the Application
 
 1. Start the Streamlit frontend:
 
@@ -168,6 +171,7 @@ streamlit run app.py
 
 <p align="center">
     <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/graphmind-streamlit.png" alt="Streamlit Demo">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/neo4j-example.png" alt="Neo4j Example">
 </p>
 
 ## Known Issues / Future Updates
