@@ -1,7 +1,7 @@
 from typing import Dict, List
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from langchain_community.graphs import Neo4jGraph
+from langchain_neo4j import Neo4jGraph
 from langchain_community.vectorstores import Neo4jVector
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.output_parsers import StrOutputParser

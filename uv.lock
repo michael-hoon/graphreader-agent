@@ -856,6 +856,7 @@ dependencies = [
     { name = "boto3" },
     { name = "langchain" },
     { name = "langchain-community" },
+    { name = "langchain-neo4j" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-text-splitters" },
@@ -872,6 +873,7 @@ requires-dist = [
     { name = "boto3", specifier = ">=1.35.86" },
     { name = "langchain", specifier = ">=0.3.13" },
     { name = "langchain-community", specifier = ">=0.3.13" },
+    { name = "langchain-neo4j", specifier = ">=0.2.0" },
     { name = "langchain-ollama", specifier = ">=0.2.2" },
     { name = "langchain-openai", specifier = ">=0.2.14" },
     { name = "langchain-text-splitters", specifier = ">=0.3.4" },
@@ -1387,6 +1389,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/de/f2/1787f9e7fcf6bee70f7a8f488ee95b814408706ab35d61dbba279fbe7361/langchain_core-0.3.28.tar.gz", hash = "sha256:407f7607e6b3c0ebfd6094da95d39b701e22e59966698ef126799782953e7f2c", size = 330743 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9a/bf/07e63d4b4c41aa49daf4a4499e8010928ce8545469f0265544f925c95fff/langchain_core-0.3.28-py3-none-any.whl", hash = "sha256:a02f81ca53a8eed757133797e5a602ca80c1324bbecb0c5d86ef7bd3d6625372", size = 411553 },
+]
+
+[[package]]
+name = "langchain-neo4j"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain" },
+    { name = "langchain-core" },
+    { name = "neo4j" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/9b/c6b672e557cf166865e6f37b5159f5d657b9cf7aa5002d18c4b7472a0255/langchain_neo4j-0.2.0.tar.gz", hash = "sha256:97a47c1b99e59b46a7c1516b4468588c9ff0e4801defc9c0ddcc29e9d9197a9c", size = 34466 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ef/01/5d9c66c113ff630573e25d9c9e7964168e1c2fffefa5b86f51df7cce7dec/langchain_neo4j-0.2.0-py3-none-any.whl", hash = "sha256:83aa0b3f4eb35630e1deef6af2dd55ccb665a97389ad40117a50d707d8356ed9", size = 38166 },
 ]
 
 [[package]]

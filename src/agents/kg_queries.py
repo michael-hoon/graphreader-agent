@@ -1,7 +1,7 @@
 from typing import List, Dict
 from dotenv import load_dotenv
 
-from langchain_community.graphs import Neo4jGraph
+from langchain_neo4j import Neo4jGraph
 
 load_dotenv()
 
