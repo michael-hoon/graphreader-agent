@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class PDFExtractor:
-    def __init__(self, bucket: str, prefix: str = '', use_ssl: bool = False):
+    def __init__(self, prefix: str = '', use_ssl: bool = False):
         """
         Initializes the PDFExtractor with MinIO S3 configuration.
         
@@ -15,7 +15,7 @@ class PDFExtractor:
         :param prefix: Folder path inside the bucket (optional).
         :param use_ssl: Whether to use SSL (HTTPS).
         """
-        self.bucket = bucket
+        self.bucket = os.getenv('MINIO_BUCKET')
         self.prefix = prefix
         self.use_ssl = use_ssl
         self.endpoint = os.getenv('MINIO_ENDPOINT')

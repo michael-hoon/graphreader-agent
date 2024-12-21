@@ -3,7 +3,7 @@ from kg_builder.pdf_extractor import PDFExtractor
 from kg_builder.kg_processor import KGProcessor
 
 async def process_kg():
-    extractor = PDFExtractor(docs_path="../../docs/")
+    extractor = PDFExtractor()
 
     print("Extracting text from PDFs...")
     extracted_texts = extractor.extract_texts()

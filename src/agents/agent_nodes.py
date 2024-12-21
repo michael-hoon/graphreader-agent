@@ -41,8 +41,8 @@ from .utils import parse_function
 
 load_dotenv()
 
-# model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, streaming=True)
-model = ChatOllama(model="qwen2.5:32b")
+model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, streaming=True)
+# model = ChatOllama(model="qwen2.5:32b")
 # embeddings = OllamaEmbeddings(model="nomic-embed-text")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 neo4j_graph = Neo4jGraph(refresh_schema=False)

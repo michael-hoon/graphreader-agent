@@ -1,0 +1,21 @@
+[project]
+name = "graphreader-agent"
+version = "0.1.0"
+description = "GraphMind is an advanced AI research assistant leveraging LangGraph for agent orchestration and Neo4j to construct and query a knowledge graph of research papers."
+readme = "README.md"
+authors = [{ name = "Michael Hoon", email = "michaelhoon@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "langchain-text-splitters>=0.3.4",
+    "langchain>=0.3.13",
+    "langchain-ollama>=0.2.2",
+    "langchain-openai>=0.2.14",
+    "langgraph>=0.2.60",
+    "streamlit>=1.41.1",
+    "pydantic>=2.10.4",
+    "neo4j>=5.27.0",
+    "python-dotenv>=1.0.1",
+    "langchain-community>=0.3.13",
+    "boto3>=1.35.86",
+    "unstructured[pdf]>=0.16.11",
+]
