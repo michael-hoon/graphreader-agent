@@ -176,7 +176,7 @@ streamlit run app.py
 
 ## Known Issues / Future Updates
  
-1. Currently no functionality for choosing different models on sidebar.
+1. Currently no functionality for choosing different models on sidebar (config file WIP).
 2. Ollama structured output still having issues, using OpenAI API for now.
 3. PostgreSQL integration failing due to issue with tracking session states.
 4. Agent implementation needs improvement by rewriting certain agents as tools instead.
