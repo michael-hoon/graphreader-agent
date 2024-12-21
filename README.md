@@ -46,7 +46,6 @@ The underlying architecture behind the GraphMind Agentic Framework leverages the
 
 The Neo4j Knowledge Graph ontology is pre-defined and shown as follows:
 
-
 <p align="center">
     <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/neo4j_ontology.png" alt="Neo4j Ontology">
 </p>
@@ -166,6 +165,10 @@ streamlit run app.py
 ✨ Interact with the GraphMind assistant and analyze your PDF research corpus. Ask any question!
 
 ✨ Give feedback on LLM answers and export conversation history on the "Chat Management" tab in JSON format, with human feedback tracked.
+
+<p align="center">
+    <img src="https://github.com/michael-hoon/graphreader-agent/blob/main/static/graphmind-streamlit.png" alt="Streamlit Demo">
+</p>
 
 ## Known Issues / Future Updates
  
